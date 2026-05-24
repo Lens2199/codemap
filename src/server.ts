@@ -2,6 +2,7 @@ import express from 'express';
 import {pool} from './db/pool.js'
 import authRoutes from './routes/auth.js'
 import analysesRoutes from './routes/analyses.js';
+import sharesRoutes from './routes/shares.js';
 
 const app = express();
 const PORT = 3000;
@@ -12,6 +13,7 @@ app.use(express.json());
 //Mount auth routes at /api/auth
 app.use('/api/auth', authRoutes);
 app.use('/api', analysesRoutes);
+app.use('/api', sharesRoutes);
 
 app.get('/', (req, res) =>{
     res.send('CodeMap server is running!');

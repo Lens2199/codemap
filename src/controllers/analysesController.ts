@@ -79,3 +79,25 @@ export async function analyzeRepo(req: Request, res: Response) {
         });
     }
 }
+
+export async function listAnalyses(req: Request, res: Response){
+    try{
+        const result = await pool.query(
+           `SELECT id, repo_name, github_url, created_at
+            FROM analyses
+            WHERE user_id = $1
+            ORDER BY created_at DESC`,
+            [req.userId]
+        );
+
+        return res.json({
+            count: result.rows.length,
+            analyses: result.rows,
+        });
+    } catch (err){
+        console.error('List analyses error:', err);
+        return res.status(500).json({
+            error: 'Failed to load analyses'
+        });
+    }
+}
