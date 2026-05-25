@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+@theme {
+  /* Map-inspired palette */
+  --color-paper: #f4ede0;
+  --color-paper-dark: #e8dfce;
+  --color-ink: #2a2724;
+  --color-ink-light: #6b6760;
+  --color-stone: #8b8378;
+  --color-forest: #4a8061;
+  --color-forest-hover: #3d6b54;
+  --color-river: #1e4a6e;
+  --color-river-hover: #163851;
+
+  /* Fonts */
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+}
