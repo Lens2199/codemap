@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import {pool} from './db/pool.js'
 import authRoutes from './routes/auth.js'
 import analysesRoutes from './routes/analyses.js';
@@ -6,6 +7,11 @@ import sharesRoutes from './routes/shares.js';
 
 const app = express();
 const PORT = 3000;
+
+// Enable CORS for the frontend (Vite runs on 5173)
+app.use(cors({
+    origin: 'http://localhost:5173'
+}));
 
 //Parse JSON bodies on incoming requests
 app.use(express.json());
