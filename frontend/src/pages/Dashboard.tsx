@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Compass, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
+import MermaidDiagram from "../components/MermaidDiagram";
 
 type Analysis = {
   id: number;
@@ -122,7 +123,49 @@ export default function Dashboard() {
                 </span>
               </div>
               <div className="prose prose-stone max-w-none">
-                <ReactMarkdown>{analysis.content}</ReactMarkdown>
+                <ReactMarkdown
+                  components={{
+                    pre({ children }) {
+                      // Check if this pre contains a mermaid code block
+                      const child = Array.isArray(children)
+                        ? children[0]
+                        : children;
+                      const childClassName =
+                        child && typeof child === "object" && "props" in child
+                          ? child.props?.className || ""
+                          : "";
+
+                      // If it's mermaid, render children directly (no dark pre wrapper)
+                      if (childClassName.includes("language-mermaid")) {
+                        return <>{children}</>;
+                      }
+
+                      // Otherwise, keep the normal pre with formatting
+                      return (
+                        <pre className="bg-paper-dark text-ink rounded-md p-4 overflow-x-auto text-sm">
+                          {children}
+                        </pre>
+                      );
+                    },
+                    code({ className, children, ...props }) {
+                      const isMermaid = className?.includes("language-mermaid");
+
+                      if (isMermaid) {
+                        return (
+                          <MermaidDiagram chart={String(children).trim()} />
+                        );
+                      }
+
+                      return (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                  }}
+                >
+                  {analysis.content}
+                </ReactMarkdown>
               </div>
             </div>
           )}
