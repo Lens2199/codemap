@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Compass, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 
 type Analysis = {
   id: number;
@@ -113,17 +114,16 @@ export default function Dashboard() {
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
           {analysis && (
-            <div className="mt-8 rounded-md border border-stone/30 bg-white p-5">
-              <div className="flex items-baseline justify-between mb-3">
+            <div className="mt-8 rounded-md border border-stone/30 bg-white p-8">
+              <div className="flex items-baseline justify-between mb-6">
                 <h2 className="font-serif text-2xl text-ink">Analysis</h2>
                 <span className="text-sm text-ink-light font-mono">
                   {analysis.repo}
                 </span>
               </div>
-
-              <pre className="text-sm text-ink-light whitespace-pre-wrap font-sans">
-                {analysis.content}
-              </pre>
+              <div className="prose prose-stone max-w-none">
+                <ReactMarkdown>{analysis.content}</ReactMarkdown>
+              </div>
             </div>
           )}
         </div>
