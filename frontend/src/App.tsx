@@ -4,6 +4,8 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Signup from "./pages/Signup";
+import SharedAnalysis from "./pages/SharedAnalysis";
+
 
 function App() {
   return (
@@ -13,6 +15,7 @@ function App() {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="*" element={<NotFound />} />
+      <Route path="/share/:token" element={<SharedAnalysis />} />
     </Routes>
   );
 }

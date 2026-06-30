@@ -26,6 +26,9 @@ export default function Dashboard() {
   const [history, setHistory] = useState<AnalysisSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
+  const [isSharing, setIsSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   function handleLogout() {
     localStorage.removeItem("token");
@@ -79,15 +82,52 @@ export default function Dashboard() {
 
       setAnalysis(data.analysis);
     } catch (err) {
-       console.error("Load analysis error:", err);
+      console.error("Load analysis error:", err);
       setError("Could not connect to server.");
     } finally {
       setIsLoading(false);
     }
   }
+
+  async function handleShare() {
+    if (!analysis) return;
+
+    setIsSharing(true);
+    setShareUrl("");
+    setCopied(false);
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `http://localhost:3000/api/share/${analysis.id}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Failed to create share link");
+        return;
+      }
+
+      const url = `${window.location.origin}/share/${data.share.token}`;
+      setShareUrl(url);
+    } catch (err) {
+      console.error("Share error:", err);
+      setError("Could not create share link.");
+    } finally {
+      setIsSharing(false);
+    }
+  }
   useEffect(() => {
-  void fetchHistory();
-}, []);
+    void fetchHistory();
+  }, []);
 
   async function handleAnalyze() {
     setError("");
@@ -213,10 +253,37 @@ export default function Dashboard() {
               <div className="mt-8 rounded-md border border-stone/30 bg-white p-8">
                 <div className="flex items-baseline justify-between mb-6">
                   <h2 className="font-serif text-2xl text-ink">Analysis</h2>
-                  <span className="text-sm text-ink-light font-mono">
-                    {analysis.repo}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-ink-light font-mono">
+                      {analysis.repo}
+                    </span>
+                    <button
+                      onClick={handleShare}
+                      disabled={isSharing}
+                      className="text-sm text-forest hover:text-forest-hover font-medium transition disabled:opacity-50"
+                    >
+                      {isSharing ? "Creating link..." : "Share"}
+                    </button>
+                  </div>
                 </div>
+
+                {shareUrl && (
+                  <div className="mb-6 p-3 rounded-md bg-paper-dark flex items-center justify-between gap-3">
+                    <code className="text-sm text-ink truncate">
+                      {shareUrl}
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(shareUrl);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="text-sm text-forest hover:text-forest-hover font-medium whitespace-nowrap"
+                    >
+                      {copied ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                )}
 
                 <div className="prose prose-stone max-w-none">
                   <ReactMarkdown
