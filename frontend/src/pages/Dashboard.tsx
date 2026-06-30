@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Compass, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
@@ -11,11 +11,19 @@ type Analysis = {
   created_at: string;
 };
 
+type AnalysisSummary = {
+  id: number;
+  repo_name: string;
+  github_url: string;
+  created_at: string;
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
 
   const [url, setUrl] = useState("");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [history, setHistory] = useState<AnalysisSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,6 +31,63 @@ export default function Dashboard() {
     localStorage.removeItem("token");
     navigate("/login");
   }
+
+  async function fetchHistory() {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch("http://localhost:3000/api/analyses", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setHistory(data.analyses);
+        console.log("History loaded:", data.analyses);
+      }
+    } catch (err) {
+      console.error("Failed to load history:", err);
+    }
+  }
+
+  async function loadAnalysis(id: number) {
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`http://localhost:3000/api/analyses/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Failed to load analysis");
+        return;
+      }
+
+      setAnalysis(data.analysis);
+    } catch (err) {
+       console.error("Load analysis error:", err);
+      setError("Could not connect to server.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  useEffect(() => {
+  void fetchHistory();
+}, []);
 
   async function handleAnalyze() {
     setError("");
@@ -54,6 +119,7 @@ export default function Dashboard() {
       }
 
       setAnalysis(data.analysis);
+      fetchHistory();
     } catch (err) {
       console.error("Analyze network error:", err);
       setError("Could not connect to server. Is the backend running?");
@@ -82,95 +148,127 @@ export default function Dashboard() {
         </button>
       </header>
 
-      {/* Analyze section */}
-      <main className="px-6 md:px-12 lg:px-20 pt-12 pb-32">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="font-serif text-4xl font-medium text-ink mb-2 tracking-tight">
-            Analyze a repository
-          </h1>
+      <div className="flex">
+        {/* SIDEBAR */}
+        <aside className="w-64 min-h-[calc(100vh-77px)] border-r border-stone/20 px-4 py-6 hidden md:block">
+          <h2 className="text-xs font-medium text-ink-light uppercase tracking-wide mb-4 px-2">
+            Your analyses
+          </h2>
 
-          <p className="text-ink-light mb-8">
-            Paste a public GitHub URL and CodeMap will explain how the codebase
-            works.
-          </p>
+          <div className="space-y-1">
+            {history.length === 0 && (
+              <p className="text-sm text-ink-light px-2">No analyses yet.</p>
+            )}
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://github.com/owner/repo"
-              className="flex-1 px-4 py-3 rounded-md border border-stone/30 bg-white text-ink focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 transition"
-            />
-
-            <button
-              onClick={handleAnalyze}
-              disabled={isLoading}
-              className="bg-forest hover:bg-forest-hover text-white font-medium px-7 py-3.5 rounded-md transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Analyzing..." : "Analyze"}
-            </button>
+            {history.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => loadAnalysis(item.id)}
+                className="w-full text-left px-3 py-2 rounded-md hover:bg-paper-dark transition group"
+              >
+                <div className="text-sm text-ink truncate group-hover:text-forest transition">
+                  {item.repo_name}
+                </div>
+                <div className="text-xs text-ink-light">
+                  {new Date(item.created_at).toLocaleDateString()}
+                </div>
+              </button>
+            ))}
           </div>
+        </aside>
 
-          {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+        {/* MAIN AREA */}
+        <main className="flex-1 px-6 md:px-12 pt-12 pb-32">
+          <div className="max-w-2xl mx-auto">
+            <h1 className="font-serif text-4xl font-medium text-ink mb-2 tracking-tight">
+              Analyze a repository
+            </h1>
 
-          {analysis && (
-            <div className="mt-8 rounded-md border border-stone/30 bg-white p-8">
-              <div className="flex items-baseline justify-between mb-6">
-                <h2 className="font-serif text-2xl text-ink">Analysis</h2>
-                <span className="text-sm text-ink-light font-mono">
-                  {analysis.repo}
-                </span>
-              </div>
-              <div className="prose prose-stone max-w-none">
-                <ReactMarkdown
-                  components={{
-                    pre({ children }) {
-                      // Check if this pre contains a mermaid code block
-                      const child = Array.isArray(children)
-                        ? children[0]
-                        : children;
-                      const childClassName =
-                        child && typeof child === "object" && "props" in child
-                          ? child.props?.className || ""
+            <p className="text-ink-light mb-8">
+              Paste a public GitHub URL and CodeMap will explain how the
+              codebase works.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://github.com/owner/repo"
+                className="flex-1 px-4 py-3 rounded-md border border-stone/30 bg-white text-ink focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 transition"
+              />
+
+              <button
+                onClick={handleAnalyze}
+                disabled={isLoading}
+                className="bg-forest hover:bg-forest-hover text-white font-medium px-7 py-3.5 rounded-md transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Analyzing..." : "Analyze"}
+              </button>
+            </div>
+
+            {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+
+            {analysis && (
+              <div className="mt-8 rounded-md border border-stone/30 bg-white p-8">
+                <div className="flex items-baseline justify-between mb-6">
+                  <h2 className="font-serif text-2xl text-ink">Analysis</h2>
+                  <span className="text-sm text-ink-light font-mono">
+                    {analysis.repo}
+                  </span>
+                </div>
+
+                <div className="prose prose-stone max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      pre({ children }) {
+                        const child = Array.isArray(children)
+                          ? children[0]
+                          : children;
+
+                        const childClassName = React.isValidElement<{
+                          className?: string;
+                        }>(child)
+                          ? child.props.className || ""
                           : "";
 
-                      // If it's mermaid, render children directly (no dark pre wrapper)
-                      if (childClassName.includes("language-mermaid")) {
-                        return <>{children}</>;
-                      }
+                        if (childClassName.includes("language-mermaid")) {
+                          return <>{children}</>;
+                        }
 
-                      // Otherwise, keep the normal pre with formatting
-                      return (
-                        <pre className="bg-paper-dark text-ink rounded-md p-4 overflow-x-auto text-sm">
-                          {children}
-                        </pre>
-                      );
-                    },
-                    code({ className, children, ...props }) {
-                      const isMermaid = className?.includes("language-mermaid");
-
-                      if (isMermaid) {
                         return (
-                          <MermaidDiagram chart={String(children).trim()} />
+                          <pre className="bg-paper-dark text-ink rounded-md p-4 overflow-x-auto text-sm">
+                            {children}
+                          </pre>
                         );
-                      }
+                      },
 
-                      return (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
-                    },
-                  }}
-                >
-                  {analysis.content}
-                </ReactMarkdown>
+                      code({ className, children, ...props }) {
+                        const isMermaid =
+                          className?.includes("language-mermaid");
+
+                        if (isMermaid) {
+                          return (
+                            <MermaidDiagram chart={String(children).trim()} />
+                          );
+                        }
+
+                        return (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        );
+                      },
+                    }}
+                  >
+                    {analysis.content}
+                  </ReactMarkdown>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </main>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

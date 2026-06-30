@@ -101,3 +101,38 @@ export async function listAnalyses(req: Request, res: Response){
         });
     }
 }
+
+export async function getAnalysis(req: Request, res: Response) {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT id, repo_name, github_url, analysis_content, created_at
+       FROM analyses
+       WHERE id = $1 AND user_id = $2`,
+      [id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Analysis not found',
+      });
+    }
+
+    const row = result.rows[0];
+
+    return res.json({
+      analysis: {
+        id: row.id,
+        repo: row.repo_name,
+        content: row.analysis_content,
+        created_at: row.created_at,
+      },
+    });
+  } catch (err) {
+    console.error('Get analysis error:', err);
+    return res.status(500).json({
+      error: 'Failed to load analysis',
+    });
+  }
+}
